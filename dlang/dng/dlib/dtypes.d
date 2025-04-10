@@ -4,32 +4,74 @@ import core.stdc.time;
 
 extern (C):
 
-alias gchar = byte;
-alias gshort = short;
-alias glong = long;
-alias gint = int;
-alias gboolean = bool;
+alias DPtr = void*;
+alias DConstPtr = const(void)*;
 
-alias guchar = ubyte;
-alias gushort = ushort;
-alias gulong = ulong;
-alias guint = uint;
+alias DFCompare = int function(DConstPtr a, DConstPtr b);
+alias DFDataCompare = int function(DConstPtr a, DConstPtr b, DPtr uData);
+alias DFEquals = bool function(DConstPtr a, DConstPtr b);
 
-alias gfloat = float;
-alias gdouble = double;
+/***
+ * df_data_equals:
+ * @a: a value
+ * @b: a value to compare with
+ * @uData: data provided by the caller
+ *
+ * Specifies the type of a function used to test two values for
+ * equality. The function should return %TRUE if both values are equal
+ * and %FALSE otherwise.
+ *
+ * This is a version of #df_equals which provides a @uData closure from
+ * the caller.
+ *
+ * Returns: %TRUE if @a = @b; %FALSE otherwise */
+alias DFDataEquals = bool function(DConstPtr a, DConstPtr b, DPtr uData);
 
-alias gpointer = void*;
-alias gconstpointer = const void*;
+alias DFDestroyNotify = void function(DPtr eData);
+alias DFIterList = void function(DPtr eData, DPtr uData);
+alias DFNewHash = int function(DConstPtr key);
+alias DFIterHash = void function(DPtr key, DPtr value, DPtr uData);
+
+/***
+ * GCopyFunc:
+ * @src: (not nullable): A pointer to the data which should be copied
+ * @data: Additional data
+ *
+ * A function of this signature is used to copy the node data
+ * when doing a deep-copy of a tree.
+ *
+ * Returns: (not nullable): A pointer to the copy */
+alias DFCopy = DPtr function(DConstPtr src, DPtr eData);
+
+/***
+ * DFFree:
+ * @data: a data pointer
+ *
+ * Declares a type of function which takes an arbitrary
+ * data pointer argument and has no return value.
+ * It is not currently used in DLib. */
+alias DFFree = void function(DPtr data);
+
+/***
+ * DFTranslate:
+ * @str: the untranslated string
+ * @uData: user data specified when installing the function, e.g.
+ *  in d_option_group_set_translate()
+ *
+ * The type of functions which are used to translate user-visible
+ * strings, for <option>--help</option> output.
+ *
+ * Returns: a translation of the string for the current locale.
+ * The returned string is owned by DLib and must not be freed. */
+alias DFTranslate = const(char)* function(const(char)* str, DPtr uData);
 
 /* Define some mathematical constants that aren't available
  * symbolically in some strict ISO C implementations.
  *
  * Note that the large number of digits used in these definitions
- * doesn't imply that GLib or current computers in general would be
+ * doesn't imply that DLib or current computers in general would be
  * able to handle floating point numbers with an accuracy like this.
- * It's mostly an exercise in futility and future proofing. For
- * extended precision floating point support, look somewhere else
- * than GLib. */
+ * It's mostly an exercise in futility and future proofing. */
 enum G_E = 2.7182818284590452353602874713526624977572470937000;
 enum G_LN2 = 0.69314718055994530941723212145817656807550013436026;
 enum G_LN10 = 2.3025850929940456840179914546843642076011014886288;

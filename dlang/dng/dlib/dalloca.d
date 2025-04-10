@@ -5,7 +5,7 @@ import core.stdc.string: memset;
 
 extern (C):
 /***
- * d_alloca:
+ * DAlloca:
  * @size: number of bytes to allocate.
  *
  * Allocates @size bytes on the stack; these bytes will be freed when the current
@@ -39,10 +39,10 @@ extern (C):
  *   not upon exit of the enclosing function scope.
  *
  * Returns: space for @size bytes, allocated on the stack */
-alias d_alloca = alloca;
+alias DAlloca = alloca;
 
 /***
- * d_alloca0:
+ * DAlloca0:
  * @size: number of bytes to allocate.
  *
  * Wraps alloca() and initializes allocated memory to zeroes.
@@ -51,30 +51,30 @@ alias d_alloca = alloca;
  * Note that the @size argument will be evaluated multiple times.
  *
  * Returns: space for @size bytes, allocated on the stack */
-enum void* d_alloca0(size_t size) = size == 0 ? null : memset(alloca(size), 0, size);
+enum void* DAlloca0(size_t size) = size == 0 ? null : memset(alloca(size), 0, size);
 
 /***
- * d_newa:
+ * DNewA:
  * @T: Type of memory chunks to be allocated
- * @n: Number of chunks to be allocated
+ * @num: Number of chunks to be allocated
  *
  * Wraps alloca() in a more typesafe manner.
  *
- * As mentioned in the documentation for d_alloca(), @n must always be
+ * As mentioned in the documentation for DAlloca(), @num must always be
  * entirely under the control of the program, or you may introduce a denial of
  * service vulnerability. In addition, the multiplication of @T by
- * @n is not checked, so an overflow may lead to a remote code execution
+ * @num is not checked, so an overflow may lead to a remote code execution
  * vulnerability.
  *
- * Returns: Pointer to stack space for @n chunks of type @T */
-enum d_newa(T, size_t n) = cast(T*)alloca(T.sizeof * n);
+ * Returns: Pointer to stack space for @num chunks of type @T */
+enum T* DNewA(T, size_t num) = cast(T*)alloca(T.sizeof * num);
 
 /***
- * d_newa0:
+ * DNewA0:
  * @T: the type of the elements to allocate.
- * @n: the number of elements to allocate.
+ * @num: the number of elements to allocate.
  *
- * Wraps d_alloca0() in a more typesafe manner.
+ * Wraps DAlloca0() in a more typesafe manner.
  *
- * Returns: Pointer to stack space for @n chunks of type @T */
-enum d_newa0(T, size_t n) = cast(T*)d_alloca0(T.sizeof * n);
+ * Returns: Pointer to stack space for @num chunks of type @T */
+enum T* DNewA0(T, size_t num) = cast(T*)DAlloca0(T.sizeof * num);
