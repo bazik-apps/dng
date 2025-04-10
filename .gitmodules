@@ -1,0 +1,9 @@
+[submodule "glibs"]
+	path = upstream/glibs
+	url = https://gitlab.gnome.org/GNOME/glib.git
+	shallow = true
+
+[submodule "gvdb"]
+	path = upstream/gvdb
+	url = https://gitlab.gnome.org/GNOME/gvdb.git
+	shallow = true
