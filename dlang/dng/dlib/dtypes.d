@@ -1,6 +1,7 @@
-module dlang.dng.dlib.dtypes;
+module dng.dlib.dtypes;
 
 import core.stdc.time;
+import dng.test.nopromote;
 
 extern (C):
 
@@ -80,31 +81,105 @@ enum G_PI_2 = 1.5707963267948966192313216916397514420985846996876;
 enum G_PI_4 = 0.78539816339744830961566084581987572104929234984378;
 enum G_SQRT2 = 1.4142135623730950488016887242096980785696718753769;
 
-/* Portable endian checks and conversions
- *
- * glibconfig.h defines G_BYTE_ORDER which expands to one of
- * the below macros. */
-enum G_LITTLE_ENDIAN = 1234;
-enum G_BIG_ENDIAN = 4321;
-enum G_PDP_ENDIAN = 3412; /* unused, need specific PDP check */
+/* Basic bit swapping templates */
+//dfmt off
+template SWAP_LE_BE(alias val) if (typeof(val).sizeof == 2) {
+	enum typeof(val) SWAP_LE_BE = cast(typeof(val))(
+		cast(typeof(val))(val << 8) |
+		cast(typeof(val))(val >> 8)
+	);
+}
 
-/* Basic bit swapping functions */
-enum ushort GUINT16_SWAP_LE_BE_CONSTANT(ushort val) = (val >> 8) | (val << 8);
+template SWAP_LE_BE(alias val) if (typeof(val).sizeof == 4) {
+	enum typeof(val) SWAP_LE_BE = cast(typeof(val))(
+		((val & 0x000000ff) << 24) |
+		((val & 0x0000ff00) <<  8) |
+		((val & 0x00ff0000) >>  8) |
+		((val & 0xff000000) >> 24)
+	);
+}
 
-// dfmt off
-enum uint GUINT32_SWAP_LE_BE_CONSTANT(uint val) =
-	((val & 0x000000ffU) << 24) |
-	((val & 0x0000ff00U) <<  8) |
-	((val & 0x00ff0000U) >>  8) |
-	((val & 0xff000000U) >> 24);
-
-enum ulong GUINT64_SWAP_LE_BE_CONSTANT(ulong val) =
-	((val & 0x00000000000000ffUL) << 56) |
-	((val & 0x000000000000ff00UL) << 40) |
-	((val & 0x0000000000ff0000UL) << 24) |
-	((val & 0x00000000ff000000UL) <<  8) |
-	((val & 0x000000ff00000000UL) >>  8) |
-	((val & 0x0000ff0000000000UL) >> 24) |
-	((val & 0x00ff000000000000UL) >> 40) |
-	((val & 0xff00000000000000UL) >> 56);
+template SWAP_LE_BE(alias val) if (typeof(val).sizeof == 8) {
+	enum typeof(val) SWAP_LE_BE = cast(typeof(val))(
+		((val & 0x00000000000000ffL) << 56) |
+		((val & 0x000000000000ff00L) << 40) |
+		((val & 0x0000000000ff0000L) << 24) |
+		((val & 0x00000000ff000000L) <<  8) |
+		((val & 0x000000ff00000000L) >>  8) |
+		((val & 0x0000ff0000000000L) >> 24) |
+		((val & 0x00ff000000000000L) >> 40) |
+		((val & 0xff00000000000000L) >> 56)
+	);
+}
 // dfmt on
+
+/* IEEE Standard 754 Single Precision Storage Format (float):
+ *
+ *        31 30           23 22            0
+ * +--------+---------------+---------------+
+ * | s 1bit | e[30:23] 8bit | f[22:0] 23bit |
+ * +--------+---------------+---------------+
+ * B0------------------->B1------->B2-->B3-->
+ *
+ * IEEE Standard 754 Double Precision Storage Format (double):
+ *
+ *        63 62            52 51            32   31            0
+ * +--------+----------------+----------------+ +---------------+
+ * | s 1bit | e[62:52] 11bit | f[51:32] 20bit | | f[31:0] 32bit |
+ * +--------+----------------+----------------+ +---------------+
+ * B0--------------->B1---------->B2--->B3---->  B4->B5->B6->B7-> */
+/***
+ * subtract from biased_exponent to form base2 exponent (normal numbers) */
+enum G_IEEE754_FLOAT_BIAS = 127;
+enum G_IEEE754_DOUBLE_BIAS = 1023;
+/***
+ * multiply with base2 exponent to get base10 exponent (normal numbers) */
+enum G_LOG_2_BASE_10 = 0.30102999566398119521;
+
+version (LittleEndian) {
+	union GFloatIEEE754 {
+		float v_float;
+		struct mpn {
+			uint mantissa : 23;
+			uint biased_exponent : 8;
+			uint sign : 1;
+		}
+	}
+
+	union GDoubleIEEE754 {
+		double v_double;
+		struct mpn {
+			uint mantissa_low : 32;
+			uint mantissa_high : 20;
+			uint biased_exponent : 11;
+			uint sign : 1;
+		}
+	}
+}
+else version (BigEndian) {
+	union GFloatIEEE754 {
+		float v_float;
+		struct mpn {
+			uint sign : 1;
+			uint biased_exponent : 8;
+			uint mantissa : 23;
+		}
+	}
+
+	union GDoubleIEEE754 {
+		double v_double;
+		struct mpn {
+			uint sign : 1;
+			uint biased_exponent : 11;
+			uint mantissa_high : 20;
+			uint mantissa_low : 32;
+		}
+	}
+}
+else {
+	pragma(msg, "unknown ENDIAN type");
+	static assert(0);
+}
+
+alias DRefCount = int;
+alias DAtomicRefCount = int; // should be accessed only using atomics
