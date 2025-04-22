@@ -1,16 +1,10 @@
 module dng.dlib.dtypes;
 
-import core.stdc.time;
-import dng.test.nopromote;
-
 extern (C):
 
-alias DPtr = void*;
-alias DConstPtr = const(void)*;
-
-alias DFCompare = int function(DConstPtr a, DConstPtr b);
-alias DFDataCompare = int function(DConstPtr a, DConstPtr b, DPtr uData);
-alias DFEquals = bool function(DConstPtr a, DConstPtr b);
+alias DFCompare = int function(const(void)* a, const(void)* b);
+alias DFDataCompare = int function(const(void)* a, const(void)* b, void* uData);
+alias DFEquals = bool function(const(void)* a, const(void)* b);
 
 /***
  * df_data_equals:
@@ -26,12 +20,12 @@ alias DFEquals = bool function(DConstPtr a, DConstPtr b);
  * the caller.
  *
  * Returns: %TRUE if @a = @b; %FALSE otherwise */
-alias DFDataEquals = bool function(DConstPtr a, DConstPtr b, DPtr uData);
+alias DFDataEquals = bool function(const(void)* a, const(void)* b, void* uData);
 
-alias DFDestroyNotify = void function(DPtr eData);
-alias DFIterList = void function(DPtr eData, DPtr uData);
-alias DFNewHash = int function(DConstPtr key);
-alias DFIterHash = void function(DPtr key, DPtr value, DPtr uData);
+alias DFDestroyNotify = void function(void* eData);
+alias DFIterList = void function(void* eData, void* uData);
+alias DFNewHash = int function(const(void)* key);
+alias DFIterHash = void function(void* key, void* value, void* uData);
 
 /***
  * GCopyFunc:
@@ -42,7 +36,7 @@ alias DFIterHash = void function(DPtr key, DPtr value, DPtr uData);
  * when doing a deep-copy of a tree.
  *
  * Returns: (not nullable): A pointer to the copy */
-alias DFCopy = DPtr function(DConstPtr src, DPtr eData);
+alias DFCopy = void* function(const(void)* src, void* eData);
 
 /***
  * DFFree:
@@ -51,7 +45,7 @@ alias DFCopy = DPtr function(DConstPtr src, DPtr eData);
  * Declares a type of function which takes an arbitrary
  * data pointer argument and has no return value.
  * It is not currently used in DLib. */
-alias DFFree = void function(DPtr data);
+alias DFFree = void function(void* data);
 
 /***
  * DFTranslate:
@@ -64,7 +58,7 @@ alias DFFree = void function(DPtr data);
  *
  * Returns: a translation of the string for the current locale.
  * The returned string is owned by DLib and must not be freed. */
-alias DFTranslate = const(char)* function(const(char)* str, DPtr uData);
+alias DFTranslate = const(char)* function(const(char)* str, void* uData);
 
 /* Define some mathematical constants that aren't available
  * symbolically in some strict ISO C implementations.
