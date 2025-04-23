@@ -1,11 +1,11 @@
-module dng.dlib.alloca;
+module dng.base.g_alloca;
+extern (C) __gshared @nogc nothrow @safe:
 
 import core.stdc.stdlib: alloca;
 import core.stdc.string: memset;
 
-extern (C):
 /***
- * DAlloca:
+ * g_alloca:
  * @size: number of bytes to allocate.
  *
  * Allocates @size bytes on the stack; these bytes will be freed when the current
@@ -39,42 +39,43 @@ extern (C):
  *   not upon exit of the enclosing function scope.
  *
  * Returns: space for @size bytes, allocated on the stack */
-alias DAlloca = alloca;
+alias g_alloca = alloca;
 
 /***
- * DAlloca0:
+ * g_alloca0:
  * @size: number of bytes to allocate.
  *
- * Wraps alloca() and initializes allocated memory to zeroes.
+ * Wraps g_alloca() and initializes allocated memory to zeroes.
  * If @size is `0` it returns %NULL.
  *
  * Note that the @size argument will be evaluated multiple times.
  *
- * Returns: space for @size bytes, allocated on the stack */
-enum void* DAlloca0(size_t size) = size == 0 ? null : memset(alloca(size), 0, size);
+ * Returns: (nullable) (transfer full): space for @size bytes, allocated on the stack */
+enum void* g_alloca0(size_t size) = size == 0 ? null : memset(g_alloca(size), 0, size);
 
 /***
- * DNewA:
- * @T: Type of memory chunks to be allocated
- * @num: Number of chunks to be allocated
+ * g_newa:
+ * @struct_type: Type of memory chunks to be allocated
+ * @n_structs: Number of chunks to be allocated
  *
- * Wraps alloca() in a more typesafe manner.
+ * Wraps g_alloca() in a more typesafe manner.
  *
- * As mentioned in the documentation for DAlloca(), @num must always be
+ * As mentioned in the documentation for g_alloca(), @n_structs must always be
  * entirely under the control of the program, or you may introduce a denial of
- * service vulnerability. In addition, the multiplication of @T by
- * @num is not checked, so an overflow may lead to a remote code execution
+ * service vulnerability. In addition, the multiplication of @struct_type by
+ * @n_structs is not checked, so an overflow may lead to a remote code execution
  * vulnerability.
  *
- * Returns: Pointer to stack space for @num chunks of type @T */
-enum T* DNewA(T, size_t num) = cast(T*)alloca(T.sizeof * num);
+ * Returns: Pointer to stack space for @n_structs chunks of type @struct_type */
+enum T* g_newa(T, size_t num) = cast(T*)g_alloca(T.sizeof * num);
 
 /***
- * DNewA0:
- * @T: the type of the elements to allocate.
- * @num: the number of elements to allocate.
+ * g_newa0:
+ * @struct_type: the type of the elements to allocate.
+ * @n_structs: the number of elements to allocate.
  *
- * Wraps DAlloca0() in a more typesafe manner.
+ * Wraps g_alloca0() in a more typesafe manner.
  *
- * Returns: Pointer to stack space for @num chunks of type @T */
-enum T* DNewA0(T, size_t num) = cast(T*)DAlloca0(T.sizeof * num);
+ * Returns: (nullable) (transfer full): Pointer to stack space for @n_structs
+ *   chunks of type @struct_type */
+enum T* g_newa0(T, size_t num) = cast(T*)g_alloca0(T.sizeof * num);

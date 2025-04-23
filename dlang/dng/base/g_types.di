@@ -1,34 +1,35 @@
-module dng.dlib.dtypes;
+module dng.base.g_types;
+extern (C) __gshared @nogc nothrow @safe:
 
-extern (C):
+import core.stdc.config: c_long;
 
-alias DFCompare = int function(const(void)* a, const(void)* b);
-alias DFDataCompare = int function(const(void)* a, const(void)* b, void* uData);
-alias DFEquals = bool function(const(void)* a, const(void)* b);
+alias GF_Compare = int function(const(void)* a, const(void)* b);
+alias GF_Data_Compare = int function(const(void)* a, const(void)* b, void* user_data);
+alias GF_Equals = bool function(const(void)* a, const(void)* b);
 
 /***
- * df_data_equals:
+ * GF_Data_Equals:
  * @a: a value
  * @b: a value to compare with
- * @uData: data provided by the caller
+ * @user_data: user data provided by the caller
  *
  * Specifies the type of a function used to test two values for
  * equality. The function should return %TRUE if both values are equal
  * and %FALSE otherwise.
  *
- * This is a version of #df_equals which provides a @uData closure from
+ * This is a version of #GF_Equals which provides a @user_data closure from
  * the caller.
  *
  * Returns: %TRUE if @a = @b; %FALSE otherwise */
-alias DFDataEquals = bool function(const(void)* a, const(void)* b, void* uData);
+alias GF_Data_Equals = bool function(const(void)* a, const(void)* b, void* user_data);
 
-alias DFDestroyNotify = void function(void* eData);
-alias DFIterList = void function(void* eData, void* uData);
-alias DFNewHash = int function(const(void)* key);
-alias DFIterHash = void function(void* key, void* value, void* uData);
+alias GF_Destroy_Notify = void function(void* data);
+alias GF_Iter_List = void function(void* data, void* user_data);
+alias GF_New_Hash = uint function(const(void)* key);
+alias GF_Iter_Hash = void function(void* key, void* value, void* user_data);
 
 /***
- * GCopyFunc:
+ * GF_Copy:
  * @src: (not nullable): A pointer to the data which should be copied
  * @data: Additional data
  *
@@ -36,37 +37,31 @@ alias DFIterHash = void function(void* key, void* value, void* uData);
  * when doing a deep-copy of a tree.
  *
  * Returns: (not nullable): A pointer to the copy */
-alias DFCopy = void* function(const(void)* src, void* eData);
+alias GF_Copy = void* function(const(void)* src, void* data);
 
 /***
- * DFFree:
- * @data: a data pointer
- *
- * Declares a type of function which takes an arbitrary
- * data pointer argument and has no return value.
- * It is not currently used in DLib. */
-alias DFFree = void function(void* data);
-
-/***
- * DFTranslate:
+ * GF_Translate:
  * @str: the untranslated string
- * @uData: user data specified when installing the function, e.g.
- *  in d_option_group_set_translate()
+ * @data: user data specified when installing the function, e.g.
+ *  in g_option_group_set_translate_func()
  *
  * The type of functions which are used to translate user-visible
  * strings, for <option>--help</option> output.
  *
  * Returns: a translation of the string for the current locale.
- * The returned string is owned by DLib and must not be freed. */
-alias DFTranslate = const(char)* function(const(char)* str, void* uData);
+ *  The returned string is owned by GLib and must not be freed. */
+alias GF_Translate = string function(string str, void* data);
 
-/* Define some mathematical constants that aren't available
+/***
+ * Define some mathematical constants that aren_t available
  * symbolically in some strict ISO C implementations.
  *
  * Note that the large number of digits used in these definitions
- * doesn't imply that DLib or current computers in general would be
+ * doesn_t imply that GLib or current computers in general would be
  * able to handle floating point numbers with an accuracy like this.
- * It's mostly an exercise in futility and future proofing. */
+ * It_s mostly an exercise in futility and future proofing. For
+ * extended precision floating point support, look somewhere else
+ * than GLib. */
 enum G_E = 2.7182818284590452353602874713526624977572470937000;
 enum G_LN2 = 0.69314718055994530941723212145817656807550013436026;
 enum G_LN10 = 2.3025850929940456840179914546843642076011014886288;
@@ -75,7 +70,14 @@ enum G_PI_2 = 1.5707963267948966192313216916397514420985846996876;
 enum G_PI_4 = 0.78539816339744830961566084581987572104929234984378;
 enum G_SQRT2 = 1.4142135623730950488016887242096980785696718753769;
 
-/* Basic bit swapping templates */
+/***
+ * Portable endian checks and conversions */
+enum G_LITTLE_ENDIAN = 1234;
+enum G_BIG_ENDIAN = 4321;
+enum G_PDP_ENDIAN = 3412; // unused, need specific PDP check
+
+/***
+ * Basic bit swapping templates */
 //dfmt off
 template SWAP_LE_BE(alias val) if (typeof(val).sizeof == 2) {
 	enum typeof(val) SWAP_LE_BE = cast(typeof(val))(
@@ -107,6 +109,36 @@ template SWAP_LE_BE(alias val) if (typeof(val).sizeof == 8) {
 }
 // dfmt on
 
+static pragma(inline, true) bool g_uint32_checked_add(uint* dest, uint a, uint b) {
+	*dest = a + b;
+	return *dest >= a;
+}
+
+static pragma(inline, true) bool g_uint32_checked_mul(uint* dest, uint a, uint b) {
+	*dest = a * b;
+	return !a || *dest / a == b;
+}
+
+static pragma(inline, true) bool g_uint64_checked_add(ulong* dest, ulong a, ulong b) {
+	*dest = a + b;
+	return *dest >= a;
+}
+
+static pragma(inline, true) bool g_uint64_checked_mul(ulong* dest, ulong a, ulong b) {
+	*dest = a * b;
+	return !a || *dest / a == b;
+}
+
+static pragma(inline, true) bool g_size_checked_add(size_t* dest, size_t a, size_t b) {
+	*dest = a + b;
+	return *dest >= a;
+}
+
+static pragma(inline, true) bool g_size_checked_mul(size_t* dest, size_t a, size_t b) {
+	*dest = a * b;
+	return !a || *dest / a == b;
+}
+
 /* IEEE Standard 754 Single Precision Storage Format (float):
  *
  *        31 30           23 22            0
@@ -122,16 +154,18 @@ template SWAP_LE_BE(alias val) if (typeof(val).sizeof == 8) {
  * | s 1bit | e[62:52] 11bit | f[51:32] 20bit | | f[31:0] 32bit |
  * +--------+----------------+----------------+ +---------------+
  * B0--------------->B1---------->B2--->B3---->  B4->B5->B6->B7-> */
+
 /***
  * subtract from biased_exponent to form base2 exponent (normal numbers) */
 enum G_IEEE754_FLOAT_BIAS = 127;
 enum G_IEEE754_DOUBLE_BIAS = 1023;
+
 /***
  * multiply with base2 exponent to get base10 exponent (normal numbers) */
 enum G_LOG_2_BASE_10 = 0.30102999566398119521;
 
 version (LittleEndian) {
-	union GFloatIEEE754 {
+	union G_Float_IEEE754 {
 		float v_float;
 		struct mpn {
 			uint mantissa : 23;
@@ -140,7 +174,7 @@ version (LittleEndian) {
 		}
 	}
 
-	union GDoubleIEEE754 {
+	union G_Double_IEEE754 {
 		double v_double;
 		struct mpn {
 			uint mantissa_low : 32;
@@ -151,7 +185,7 @@ version (LittleEndian) {
 	}
 }
 else version (BigEndian) {
-	union GFloatIEEE754 {
+	union G_Float_IEEE754 {
 		float v_float;
 		struct mpn {
 			uint sign : 1;
@@ -160,7 +194,7 @@ else version (BigEndian) {
 		}
 	}
 
-	union GDoubleIEEE754 {
+	union G_Double_IEEE754 {
 		double v_double;
 		struct mpn {
 			uint sign : 1;
@@ -175,5 +209,6 @@ else {
 	static assert(0);
 }
 
-alias DRefCount = int;
-alias DAtomicRefCount = int; // should be accessed only using atomics
+enum string G_DEPRECATED_FOR(f) = "Use '" ~ __traits(fullyQualifiedName, f) ~ "' instead";
+
+alias G_Refcount = shared int; // atomic
